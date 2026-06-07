@@ -97,6 +97,49 @@ jobs:
           fi
           python scripts/cloud_daily.py "${args[@]}"
 
+      - name: Reduce search indexing
+        shell: bash
+        run: |
+          mkdir -p dashboard
+          cat > dashboard/robots.txt <<'EOF'
+          User-agent: *
+          Disallow: /
+          EOF
+          cat > dashboard/vercel.json <<'EOF'
+          {
+            "$schema": "https://openapi.vercel.sh/vercel.json",
+            "headers": [
+              {
+                "source": "/(.*)",
+                "headers": [
+                  {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow, noarchive, nosnippet"
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+          python - <<'PY'
+          from pathlib import Path
+
+          html_path = Path('dashboard/index.html')
+          if not html_path.exists():
+              raise FileNotFoundError('dashboard/index.html was not generated')
+
+          text = html_path.read_text(encoding='utf-8')
+          lower = text.lower()
+          meta = '<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">'
+          if 'name="robots"' not in lower and "name='robots'" not in lower:
+              if '<head>' in lower:
+                  index = lower.index('<head>') + len('<head>')
+                  text = text[:index] + '\n  ' + meta + text[index:]
+              else:
+                  text = meta + '\n' + text
+              html_path.write_text(text, encoding='utf-8')
+          PY
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
