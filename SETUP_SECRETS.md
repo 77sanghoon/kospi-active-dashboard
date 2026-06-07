@@ -1,6 +1,6 @@
 # KOSPI Active Dashboard 설정 안내
 
-현재 저장소에는 ETF 수집 코드와 GitHub Actions 자동 실행 파일이 올라가 있습니다. 남은 작업은 Google 서비스 계정과 GitHub Secrets 연결입니다.
+현재 저장소에는 ETF 수집 코드와 GitHub Actions 자동 실행 파일이 올라가 있습니다. Google Sheets를 저장소로 쓰고, GitHub Actions가 매 영업일 오전 10시 KST에 데이터를 수집합니다.
 
 ## 현재 연결된 Google Sheet
 
@@ -43,6 +43,26 @@ Settings > Secrets and variables > Actions > New repository secret
 
 이 이메일 주소를 Google Sheet에 편집자로 공유합니다.
 
+## 저장소 공개 전환
+
+GitHub Free 계정에서는 private repository로 GitHub Pages를 사용할 수 없으므로, 저장소를 public으로 전환합니다.
+
+```text
+Settings > General > Danger Zone > Change repository visibility > Make public
+```
+
+주의: 저장소와 배포 URL을 아는 사람은 접근할 수 있습니다. Google 서비스 계정 JSON 같은 민감정보는 Secrets에만 있어야 하며, 저장소 파일로 커밋하면 안 됩니다.
+
+## 검색 노출 줄이기
+
+워크플로는 대시보드 배포 직전에 아래 설정을 자동으로 넣습니다.
+
+- `dashboard/robots.txt`: 모든 검색엔진 크롤링 차단 요청
+- `dashboard/index.html`: `noindex,nofollow,noarchive,nosnippet` 메타태그 삽입
+- `dashboard/vercel.json`: Vercel 배포 시 `X-Robots-Tag` 헤더 적용
+
+이 설정은 검색 노출을 줄이는 용도입니다. 완전한 비공개나 접근 제한은 아닙니다.
+
 ## GitHub Pages 설정
 
 GitHub 저장소에서 아래로 이동합니다.
@@ -62,6 +82,10 @@ Actions > KOSPI Active Daily Collector > Run workflow
 ```
 
 처음 테스트는 기본값으로 실행하면 됩니다. 성공하면 Google Sheet에 날짜별 시트와 요약 시트가 생기고, GitHub Pages 대시보드가 배포됩니다.
+
+## Vercel 메모
+
+Vercel로도 배포할 수 있도록 `vercel.json`의 검색 차단 헤더 설정은 준비되어 있습니다. 다만 매일 최신 데이터를 Vercel에 자동 배포하려면 Vercel 프로젝트 연결과 별도 배포 토큰 설정이 추가로 필요합니다.
 
 ## 자동 실행 시간
 
