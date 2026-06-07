@@ -106,6 +106,51 @@ jobs:
           fi
           python scripts/cloud_daily.py "${args[@]}"
 
+      - name: Ensure requested date sheet
+        continue-on-error: true
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SERVICE_ACCOUNT_B64: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_B64 }}
+          GOOGLE_SPREADSHEET_ID: ${{ secrets.GOOGLE_SPREADSHEET_ID }}
+          REQUESTED_DATE: ${{ github.event.inputs.date || '' }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          requested_date = os.environ.get('REQUESTED_DATE') or ''
+          if not requested_date:
+              print('No requested date; skipping date sheet repair.')
+              raise SystemExit(0)
+
+          data_path = Path('dashboard/data.js')
+          if not data_path.exists():
+              print('dashboard/data.js is missing; skipping date sheet repair.')
+              raise SystemExit(0)
+
+          text = data_path.read_text(encoding='utf-8').strip()
+          prefix = 'window.KOSPI_ACTIVE_DATA = '
+          if not text.startswith(prefix):
+              print('dashboard/data.js has an unexpected shape; skipping date sheet repair.')
+              raise SystemExit(0)
+          if text.endswith(';'):
+              text = text[:-1]
+          payload = json.loads(text[len(prefix):])
+          rows = [row for row in payload.get('holdings', []) if row.get('trade_date') == requested_date]
+          if not rows:
+              print(f'No holdings found for {requested_date}; skipping date sheet repair.')
+              raise SystemExit(0)
+
+          from kospi_active.reporting import DATE_HEADERS
+          from kospi_active.sheets_store import GoogleSheetsStore
+
+          store = GoogleSheetsStore.from_env()
+          store.update_values(requested_date, DATE_HEADERS, rows)
+          print(f'Repaired {requested_date} sheet with {len(rows)} holding rows.')
+          PY
+
       - name: Note collector warning
         if: steps.collect_data.outcome == 'failure'
         run: |
