@@ -38,8 +38,31 @@ jobs:
         shell: bash
         run: |
           cat .github/source-bundle/part-*.b64 > kospi-active-source.zip.b64
-          base64 -d kospi-active-source.zip.b64 > kospi-active-source.zip
-          unzip -oq kospi-active-source.zip
+          python - <<'PY'
+          import base64
+          import pathlib
+          import shutil
+          import zipfile
+
+          root = pathlib.Path('.').resolve()
+          encoded = pathlib.Path('kospi-active-source.zip.b64').read_text(encoding='utf-8')
+          zip_path = pathlib.Path('kospi-active-source.zip')
+          zip_path.write_bytes(base64.b64decode(''.join(encoded.split())))
+
+          with zipfile.ZipFile(zip_path) as archive:
+              for member in archive.infolist():
+                  normalized = member.filename.replace('\\', '/')
+                  parts = [part for part in pathlib.PurePosixPath(normalized).parts if part not in ('', '.')]
+                  if not parts or any(part == '..' for part in parts):
+                      raise ValueError(f'Unsafe archive path: {member.filename}')
+                  target = root.joinpath(*parts)
+                  if member.is_dir():
+                      target.mkdir(parents=True, exist_ok=True)
+                      continue
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  with archive.open(member) as source, target.open('wb') as dest:
+                      shutil.copyfileobj(source, dest)
+          PY
           rm kospi-active-source.zip kospi-active-source.zip.b64
 
       - name: Setup Python
