@@ -63,6 +63,12 @@ jobs:
           PY
           rm kospi-active-source.zip kospi-active-source.zip.b64
 
+      - name: Apply dashboard signal fixes
+        run: python .github/patches/apply_runtime_fixes.py
+
+      - name: Validate patched runtime
+        run: python -m py_compile kospi_active/analysis.py kospi_active/reporting.py kospi_active/sheets_store.py scripts/cloud_daily.py
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
