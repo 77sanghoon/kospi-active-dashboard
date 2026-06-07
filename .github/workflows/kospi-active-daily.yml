@@ -69,6 +69,9 @@ jobs:
       - name: Apply sheet normalization fixes
         run: python .github/patches/apply_sheet_normalization_fix.py
 
+      - name: Apply mobile UI fixes
+        run: python .github/patches/apply_mobile_ui_fix.py
+
       - name: Validate patched runtime
         run: python -m py_compile kospi_active/analysis.py kospi_active/reporting.py kospi_active/sheets_store.py scripts/cloud_daily.py
 
