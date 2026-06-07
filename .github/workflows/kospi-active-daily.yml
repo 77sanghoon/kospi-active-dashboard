@@ -86,6 +86,7 @@ jobs:
           GOOGLE_SPREADSHEET_ID: ${{ secrets.GOOGLE_SPREADSHEET_ID }}
           REQUESTED_DATE: ${{ github.event.inputs.date || '' }}
           LATEST_ONLY: ${{ github.event.inputs.latest_only || 'false' }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
           args=()
@@ -94,6 +95,9 @@ jobs:
           fi
           if [ "$LATEST_ONLY" = "true" ]; then
             args+=(--latest-only)
+          fi
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            args+=(--run-weekend)
           fi
           python scripts/cloud_daily.py "${args[@]}"
 
