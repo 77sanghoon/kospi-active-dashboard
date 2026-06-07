@@ -80,6 +80,8 @@ jobs:
         run: python scripts/check_cloud_setup.py
 
       - name: Collect ETF holdings and update Google Sheets
+        id: collect_data
+        continue-on-error: true
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_SERVICE_ACCOUNT_B64: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_B64 }}
@@ -103,6 +105,11 @@ jobs:
             args+=(--run-weekend)
           fi
           python scripts/cloud_daily.py "${args[@]}"
+
+      - name: Note collector warning
+        if: steps.collect_data.outcome == 'failure'
+        run: |
+          echo "::warning::ETF collector returned a non-zero exit code. Existing Google Sheets data and generated dashboard files will still be deployed. Check Collection_Log for source-level failures."
 
       - name: Reduce search indexing
         shell: bash
