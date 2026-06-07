@@ -10,9 +10,9 @@ on:
         required: false
         type: string
       latest_only:
-        description: "Skip KoAct/KODEX history backfill."
+        description: "Collect only the latest requested snapshot. Turn off only for slower backfill runs."
         required: false
-        default: false
+        default: true
         type: boolean
 
 permissions:
@@ -85,7 +85,7 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT_B64: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_B64 }}
           GOOGLE_SPREADSHEET_ID: ${{ secrets.GOOGLE_SPREADSHEET_ID }}
           REQUESTED_DATE: ${{ github.event.inputs.date || '' }}
-          LATEST_ONLY: ${{ github.event.inputs.latest_only || 'false' }}
+          LATEST_ONLY: ${{ github.event.inputs.latest_only || 'true' }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
@@ -93,7 +93,7 @@ jobs:
           if [ -n "$REQUESTED_DATE" ]; then
             args+=(--date "$REQUESTED_DATE")
           fi
-          if [ "$LATEST_ONLY" = "true" ]; then
+          if [ "$LATEST_ONLY" = "true" ] || [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
             args+=(--latest-only)
           fi
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
