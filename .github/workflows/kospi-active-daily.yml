@@ -2,7 +2,8 @@ name: KOSPI Active Daily Collector
 
 on:
   schedule:
-    - cron: "0 1 * * 1-5"
+    # GitHub cron uses UTC. 01:05 UTC = 10:05 KST.
+    - cron: "5 1 * * 1-5"
   workflow_dispatch:
     inputs:
       date:
