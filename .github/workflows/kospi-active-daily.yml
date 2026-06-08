@@ -2,7 +2,11 @@ name: KOSPI Active Daily Collector
 
 on:
   schedule:
-    # GitHub cron uses UTC. 01:05 UTC = 10:05 KST.
+    # GitHub cron uses UTC. These run at 07:05, 08:05, 09:05, and 10:05 KST on Korean weekdays.
+    # 07:05/08:05 KST are 22:05/23:05 UTC on the previous UTC day.
+    - cron: "5 22 * * 0-4"
+    - cron: "5 23 * * 0-4"
+    - cron: "5 0 * * 1-5"
     - cron: "5 1 * * 1-5"
   workflow_dispatch:
     inputs:
