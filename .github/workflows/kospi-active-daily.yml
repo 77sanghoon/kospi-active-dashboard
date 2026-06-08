@@ -74,6 +74,9 @@ jobs:
       - name: Apply sheet normalization fixes
         run: python .github/patches/apply_sheet_normalization_fix.py
 
+      - name: Apply intraday merge fixes
+        run: python .github/patches/apply_intraday_merge_fix.py
+
       - name: Apply mobile UI fixes
         run: python .github/patches/apply_mobile_ui_fix.py
 
