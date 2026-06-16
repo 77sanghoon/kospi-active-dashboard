@@ -2,12 +2,10 @@ name: KOSPI Active Daily Collector
 
 on:
   schedule:
-    # GitHub cron uses UTC. These run at 07:05, 08:05, 09:05, and 10:05 KST on Korean weekdays.
-    # 07:05/08:05 KST are 22:05/23:05 UTC on the previous UTC day.
-    - cron: "5 22 * * 0-4"
-    - cron: "5 23 * * 0-4"
-    - cron: "5 0 * * 1-5"
-    - cron: "5 1 * * 1-5"
+    # GitHub schedule events can be delayed. Start one runner early, then wait inside the runner.
+    # 19:30 UTC on Sunday-Thursday = 04:30 KST on Monday-Friday.
+    # The runner collects at 07:00, 08:00, 09:00, and 10:00 KST.
+    - cron: "30 19 * * 0-4"
   workflow_dispatch:
     inputs:
       date:
@@ -32,6 +30,7 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
 
     steps:
       - name: Checkout
@@ -77,6 +76,9 @@ jobs:
       - name: Apply intraday merge fixes
         run: python .github/patches/apply_intraday_merge_fix.py
 
+      - name: Apply intraday runner fixes
+        run: python .github/patches/apply_intraday_runner_fix.py
+
       - name: Apply mobile UI fixes
         run: python .github/patches/apply_mobile_ui_fix.py
 
@@ -84,7 +86,7 @@ jobs:
         run: python .github/patches/apply_cache_reload_fix.py
 
       - name: Validate patched runtime
-        run: python -m py_compile kospi_active/analysis.py kospi_active/reporting.py kospi_active/sheets_store.py scripts/cloud_daily.py
+        run: python -m py_compile kospi_active/analysis.py kospi_active/reporting.py kospi_active/sheets_store.py scripts/cloud_daily.py scripts/run_intraday_collector.py
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -163,6 +165,11 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+            python scripts/run_intraday_collector.py --targets 07:00 08:00 09:00 10:00 --grace-minutes 35
+            exit $?
+          fi
+
           args=()
           if [ -n "$REQUESTED_DATE" ]; then
             args+=(--date "$REQUESTED_DATE")
