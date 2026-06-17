@@ -102,7 +102,7 @@ jobs:
         run: python scripts/check_cloud_setup.py
 
       - name: Create requested date sheet first
-        if: github.event.inputs.date != ''
+        if: ${{ github.event.inputs.date != null && github.event.inputs.date != '' }}
         continue-on-error: true
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
