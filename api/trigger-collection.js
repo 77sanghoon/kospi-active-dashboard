@@ -62,6 +62,7 @@ module.exports = async function handler(req, res) {
       ref: REF,
       inputs: {
         slot,
+        date: '',
       },
     }),
   });
