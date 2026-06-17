@@ -1,6 +1,24 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "outputDirectory": "dashboard",
+  "crons": [
+    {
+      "path": "/api/trigger-collection?slot=0700",
+      "schedule": "0 22 * * 0-4"
+    },
+    {
+      "path": "/api/trigger-collection?slot=0800",
+      "schedule": "0 23 * * 0-4"
+    },
+    {
+      "path": "/api/trigger-collection?slot=0900",
+      "schedule": "0 0 * * 1-5"
+    },
+    {
+      "path": "/api/trigger-collection?slot=1000",
+      "schedule": "0 1 * * 1-5"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
