@@ -1,13 +1,13 @@
 name: KOSPI Active Daily Collector
+run-name: KOSPI Active Daily Collector ${{ github.event.inputs.slot }}
 
 on:
-  schedule:
-    # GitHub schedule events can be delayed. Start one runner early, then wait inside the runner.
-    # 19:30 UTC on Sunday-Thursday = 04:30 KST on Monday-Friday.
-    # The runner collects at 07:00, 08:00, 09:00, and 10:00 KST.
-    - cron: "30 19 * * 0-4"
   workflow_dispatch:
     inputs:
+      slot:
+        description: "Collection slot label from the external scheduler, e.g. 0700."
+        required: false
+        type: string
       date:
         description: "Requested date in YYYY-MM-DD. Empty uses today's KST date."
         required: false
@@ -30,7 +30,7 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -76,9 +76,6 @@ jobs:
       - name: Apply intraday merge fixes
         run: python .github/patches/apply_intraday_merge_fix.py
 
-      - name: Apply intraday runner fixes
-        run: python .github/patches/apply_intraday_runner_fix.py
-
       - name: Apply mobile UI fixes
         run: python .github/patches/apply_mobile_ui_fix.py
 
@@ -86,7 +83,7 @@ jobs:
         run: python .github/patches/apply_cache_reload_fix.py
 
       - name: Validate patched runtime
-        run: python -m py_compile kospi_active/analysis.py kospi_active/reporting.py kospi_active/sheets_store.py scripts/cloud_daily.py scripts/run_intraday_collector.py
+        run: python -m py_compile kospi_active/analysis.py kospi_active/reporting.py kospi_active/sheets_store.py scripts/cloud_daily.py
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -105,7 +102,7 @@ jobs:
         run: python scripts/check_cloud_setup.py
 
       - name: Create requested date sheet first
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.date != ''
+        if: github.event.inputs.date != ''
         continue-on-error: true
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
@@ -162,27 +159,21 @@ jobs:
           GOOGLE_SPREADSHEET_ID: ${{ secrets.GOOGLE_SPREADSHEET_ID }}
           REQUESTED_DATE: ${{ github.event.inputs.date || '' }}
           BACKFILL_HISTORY: ${{ github.event.inputs.backfill_history || 'false' }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          COLLECTION_SLOT: ${{ github.event.inputs.slot || '' }}
         shell: bash
         run: |
-          if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
-            python scripts/run_intraday_collector.py --targets 07:00 08:00 09:00 10:00 --grace-minutes 35
-            exit $?
-          fi
-
+          echo "Collection slot: ${COLLECTION_SLOT:-manual}"
           args=()
           if [ -n "$REQUESTED_DATE" ]; then
             args+=(--date "$REQUESTED_DATE")
           fi
-          if [ "$BACKFILL_HISTORY" != "true" ] || [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+          if [ "$BACKFILL_HISTORY" != "true" ]; then
             args+=(--latest-only)
           fi
           if [ "$BACKFILL_HISTORY" = "true" ]; then
             args+=(--sleep-seconds 8)
           fi
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            args+=(--run-weekend)
-          fi
+          args+=(--run-weekend)
           python scripts/cloud_daily.py "${args[@]}"
 
       - name: Note collector warning
