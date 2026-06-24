@@ -1,7 +1,22 @@
 name: KOSPI Active Daily Collector
-run-name: KOSPI Active Daily Collector ${{ github.event.inputs.slot }}
+run-name: KOSPI Active Daily Collector ${{ github.event.inputs.slot || github.event.schedule || 'manual' }}
 
 on:
+  schedule:
+    # GitHub schedule is the primary PC-independent collector.
+    # UTC 22:00/22:10 Sunday-Thursday = KST 07:00/07:10 Monday-Friday.
+    # UTC 23:00/23:10 Sunday-Thursday = KST 08:00/08:10 Monday-Friday.
+    # UTC 00:00/00:10 Monday-Friday = KST 09:00/09:10 Monday-Friday.
+    # UTC 01:00/01:10 Monday-Friday = KST 10:00/10:10 Monday-Friday.
+    # The +10 minute entries are safety retries if GitHub delays or drops a top-of-hour schedule.
+    - cron: "0 22 * * 0-4"
+    - cron: "10 22 * * 0-4"
+    - cron: "0 23 * * 0-4"
+    - cron: "10 23 * * 0-4"
+    - cron: "0 0 * * 1-5"
+    - cron: "10 0 * * 1-5"
+    - cron: "0 1 * * 1-5"
+    - cron: "10 1 * * 1-5"
   workflow_dispatch:
     inputs:
       slot:
@@ -102,7 +117,7 @@ jobs:
         run: python scripts/check_cloud_setup.py
 
       - name: Create requested date sheet first
-        if: ${{ github.event.inputs.date != null && github.event.inputs.date != '' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.date != null && github.event.inputs.date != '' }}
         continue-on-error: true
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
@@ -159,7 +174,7 @@ jobs:
           GOOGLE_SPREADSHEET_ID: ${{ secrets.GOOGLE_SPREADSHEET_ID }}
           REQUESTED_DATE: ${{ github.event.inputs.date || '' }}
           BACKFILL_HISTORY: ${{ github.event.inputs.backfill_history || 'false' }}
-          COLLECTION_SLOT: ${{ github.event.inputs.slot || '' }}
+          COLLECTION_SLOT: ${{ github.event.inputs.slot || github.event.schedule || '' }}
         shell: bash
         run: |
           echo "Collection slot: ${COLLECTION_SLOT:-manual}"
